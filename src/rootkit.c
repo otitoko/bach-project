@@ -63,6 +63,7 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 
 	int error = copy_from_user(kbuf,dirent,ret);
 	if(error){
+        goto done;
 		printk(KERN_ERR "could not copy from user");
 	}
 
@@ -88,8 +89,9 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 	   printk(KERN_ERR "copy_to_user failed");
 	   }
 	   */
-	kfree(kbuf);
-	return 0;
+done:
+    kfree(kbuf);
+    return 0;
 }
 static struct kretprobe  __x64_sys_getdents64_hook= {
 	.handler = __x64_sys_getdents64_post_handler,
