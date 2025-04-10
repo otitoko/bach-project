@@ -121,13 +121,13 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 		printk(KERN_DEBUG "access not ok");
 	}
 	
-	/*
+	
 	long error = copy_from_user(kbuf,dentry_data,ret);
 	if(error){
 		printk(KERN_ERR "could not copy %ld bytes from user",ret);
 		printk(KERN_ERR "copy_from_user error: %ld",error);
 	}
-
+/*
 	while(offset<ret){
 		current_dir = (void *)kbuf+offset;
 		printk(KERN_INFO "d_name of the current dir is: %l", current_dir->d_name);
