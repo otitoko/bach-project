@@ -89,8 +89,10 @@ static int __kprobes __x64_sys_getdents64_handler(struct kretprobe_instance *kp,
 
 	printk(KERN_INFO "handler return: %lx:", regs->ax);
 
+
 	unsigned long ret = regs_return_value(regs);
 	struct linux_dirent64 __user *dirent= (struct linux_dirent64*) regs->si;
+	printk(KERN_DEBUG "user buf address: %p ",dirent);
 
 	struct linux_dirent64 *kbuf=NULL;
 	kbuf=kzalloc(ret,GFP_KERNEL);
@@ -98,9 +100,8 @@ static int __kprobes __x64_sys_getdents64_handler(struct kretprobe_instance *kp,
 		printk(KERN_ERR "could not allocate mem");
 	}
 
-
-
 	long error = copy_from_user(kbuf,dirent,ret);
+
 	if(error){
 		printk(KERN_ERR "could not copy_from_user, %lu bytes left", ret);
 	}
