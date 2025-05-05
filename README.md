@@ -16,6 +16,7 @@ Rootkit features:
 +hides directories and files as specified
 
 TO BE IMPLEMENTED:
+-Back-Door
 -GPU-RUN Self Healing
 -Reboot persistence to run immediately upon booting
 -Debugger detection
