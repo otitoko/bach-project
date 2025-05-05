@@ -1,0 +1,5 @@
+threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
+
+usable_threads=$((threads*20/100))
+
+echo $usable_threads
