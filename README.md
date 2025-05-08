@@ -1,6 +1,6 @@
-#LKM Rootkit using the ftrace method for hooking.
+# LKM Rootkit using the ftrace method for hooking.
 
-###Execution flow(more or less):
+### Execution flow(more or less):
 
 loader_script --> groyps the grub config and copies the main script into /sbin/
 rootkit_script --> runs on boot. checks for missing files and downloads xmrig as necessary. starts xmrig and hides it via kill hook. 
