@@ -13,7 +13,7 @@
 #include "ftrace_helper.h"
 
 /* file to hide */
-#define PREFIX "wdb"
+#define PREFIX "rootkit"
 
 /* port to hide */
 #define PORT 11111

