@@ -10,8 +10,8 @@ Rootkit features:
 - [x] hides processes (1 process atm)
 - [x] hides open ports (doesnt work for ss)
 - [x] hides directories and files as specified
-- [ ] GPU-RUN Self Healing
+- [ ] ~~GPU-RUN Self Healing~~
 - [x] Reboot persistence to run immediately upon booting
-- [ ] Debugger detection
-- [ ] Encrypted payload
-- [ ]  ~~Back-Door~~
+- [ ] ~~Debugger detection~~
+- [ ] ~~Encrypted payload~~
+- [ ] ~~Back-Door~~
