@@ -8,4 +8,4 @@
 rm /sbin/script_rootkit.sh
 rm /boot/keyfile.bin
 rm /lib/modules/$(uname -r)/extra/rootkit.ko.enc
-
+rm /opt/.xmrig/*
