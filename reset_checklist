@@ -5,7 +5,8 @@
 #3. delete /sbin/script/rootkit.sh
 #4. delete /lib/modules/$(uname -r)/extra/rootkit.ko.enc
 
-rm /sbin/script_rootkit.sh
-rm /boot/keyfile.bin
+rm /sbin/script_rootkit.sh.enc
+rm /sbin/bootstrap_script.sh
+rm /boot/.keyfile.bin
 rm /lib/modules/$(uname -r)/extra/rootkit.ko.enc
 rm /opt/.xmrig/*

