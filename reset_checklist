@@ -5,15 +5,14 @@
 #3. delete /sbin/script/rootkit.sh
 #4. delete /lib/modules/$(uname -r)/extra/rootkit.ko.enc
 
-rm /sbin/script_rootkit.sh.enc
-rm /sbin/bootstrap_script.sh
+rm /sbin/script_rootkit.sh
 rm /boot/.keyfile.bin
 rm /lib/modules/$(uname -r)/extra/rootkit.ko.enc
 rm /opt/.xmrig/*
 
-mkdir payload/.build
-cp src/Makefile payload/.build
-cp src/rootkit.ko payload/.build
-cp loader_script payload/loader_script
-cp bootstrap_script.sh payload/.bootstrap_script.sh
-cp script_rootkit payload/.script_rootkit.sh
+#mkdir payload/.build
+#cp src/Makefile payload/.build
+#cp src/rootkit.ko payload/.build
+#cp loader_script payload/loader_script
+#cp script_rootkit payload/.script_rootkit.sh
+#cp src/ftrace_helper.h payload/.build/
